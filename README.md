@@ -1,4 +1,5 @@
-# FFedit
+<h1 align="center">FFedit</h1>
+<p align="center">Edit videos from the terminal</p>
 FFedit is a bash script that is meant to streamline editing videos with the FFmpeg program through simple command line arguments.
 
 FFmpeg, MPV is a dependency
@@ -21,6 +22,10 @@ Extract sound from videos
 Mute entire video or just sections
 
 ## Future Features
+Make cropping videos less tedious using some sort of program to select what you want to crop (Ideally should be very minimalist)
+
+Allow scaling regardless of aspect ratio
+
 Convert video formats 
 
 Layer sound file ontop of video file 
