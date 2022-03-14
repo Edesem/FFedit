@@ -1,10 +1,16 @@
-<h1 align="center">FFedit</h1>
+<p align="center">
+<img src="./FFedit.png" width="1000px">
+</p>
+
 <p align="center">Edit videos from the terminal</p>
+
+# Overview
+
 FFedit is a bash script that is meant to streamline editing videos with the FFmpeg program through simple command line arguments.
 
+## Dependencies
+
 FFmpeg, MPV is a dependency
-
-
 
 ## Features
 Trim videos
