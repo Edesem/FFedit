@@ -62,6 +62,9 @@ Change audio volume
 
 Update and unistall from the script itself
 
+## Bug Reporting
+If you notice any bugs simply just post an issue and I'll get around to resolving the issue
+
 ## Bugs
 **You cannot concatenate videos of different formats/sources** (or atleast its unlikely to successful work).
 	This is not an error perse but instead just how FFmpeg works, this could be fixed through automatically converting the videos to one format or to let the user convert the videos before hand
