@@ -34,11 +34,19 @@ Allow scaling regardless of aspect ratio
 
 Convert video formats 
 
+When concatenating videos give the option to convert everything into one format and then concatenate
+
 Layer sound file ontop of video file 
 
 Rotate video
 
 Change audio volume 
+
+## Bugs
+
+**You cannot concatenate videos of different formats/sources** (or atleast its unlikely to successful work).
+	This is not an error perse but instead just how FFmpeg works, this could be fixed through automatically converting the videos to one format or to let the user convert the videos before hand
+
 
 ## Contributing
 Make a pull request or an issue and I'll happily tend to it.
