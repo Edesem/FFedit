@@ -2,157 +2,204 @@
 
 # MPV is a dependency
 
-errorstatement="INCORRECT USAGE
+ERRORSTATEMENT="INCORRECT USAGE
 
 Usage:" 
 
-enderrorstatement="
+ENDERRORSTATEMENT="
 
 Refer to manual for more information"
 
-while getopts ht:cg:s:x:e:m: input
+while getopts tcgsxem input 2>/dev/null
 do
 	case $input in
 
-		"h") echo "Use 'man ffedit' for a detailed manual
-		
-All options
-
--h Help
--t Trim video
--c Concatenate video 
--g Convert video to gif format
--s Scale video 
--x Crop 
--e Extract sound
--m Mute entire video or section"	
-			;;
-
 		# Trim video option 
-		"t") videofile="$OPTARG"
+		"t") videofile=$(echo $@ | awk '{print $2}')
 			 output=$(echo $@ | awk '{print $3}')
+
 			 if [[ -z $videofile || -z $output ]]; then 
-			 	echo "$errorstatement ffedit -t [VIDEO FILE] [OUTPUT NAME/FORMAT] $enderrorstatement"
+			 	echo "$ERRORSTATEMENT ffedit -t [VIDEO FILE] [OUTPUT NAME/FORMAT] $ENDERRORSTATEMENT"
 				exit
 			 fi
+			 for (( i=1; i<=2; i++ )); do
+			 	timestamp[i]=$(mpv $videofile |& tee -a /dev/stderr | grep -o ..:..:.. | tail -n 2 | head -n 1) 
+			 done
 
-			 timestamp1=$(mpv $videofile |& tee -a /dev/stderr | grep -o ..:..:.. | tail -n 2 | head -n 1) 
-			 timestamp2=$(mpv $videofile |& tee -a /dev/stderr | grep -o ..:..:.. | tail -n 2 | head -n 1) 
-			 echo start timestamp: $timestamp1
-			 echo end timestamp: $timestamp2
+			 echo start timestamp:i ${timestamp[1]}
+			 echo end timestamp: ${timestamp[2]}
 			 output=$(echo $@ | awk '{print $3}')
 			 
-			 ffmpeg -loglevel 24 -i $videofile -ss $timestamp1 -to $timestamp2 -c copy $output;;
+			 ffmpeg -loglevel 24 -i $videofile -ss ${timestamp[1]} -to ${timestamp[2]} -c copy $output;;
 	
 		# Concatenate
 		"c") mylist=$(mktemp /tmp/mylist-XXXXXXXXXXXXX.txt) 
 	   		 concatN=$(echo $@ | awk '{print $2}')
+			 concatN=$(expr $concatN + 3)
 
-			 for (( i=3; i<=concatN+1; i++ )); do
+			 for (( i=3; i<$concatN; i++ )); do
 			 	video=$(echo $@ | awk -v i=$i '{print $i}')
 				video=$(readlink -f $video)
 				echo file \'$video\' >> $mylist
 			 done
-			 output=$(echo $@ | awk '{print $(NF)}')
 
-			 if [[ -z $concatN || -z $output ]]; then 
-				echo "$errorstatement ffedit -c [NUM OF VIDEOS] [VIDEO1] [VIDEO2] ... [OUTPUT NAME/FORMAT] $enderrorstatement"
+			 output=$(echo $@ | awk -v i=$concatN '{print $i}')
+	
+			 if [[ -z $concatN || -z $video || -z $output ]]; then 
+				echo "$ERRORSTATEMENT ffedit -c [NUM OF VIDEOS] [VIDEO1] [VIDEO2] ... [OUTPUT NAME/FORMAT] $ENDERRORSTATEMENT"
 				exit
 			 fi
 	
 			 ffmpeg -loglevel 24 -safe 0 -f concat -i $mylist -c copy $output;;
 	
 		# Convert video to gif
-		"g") videofile=$(readlink -f $OPTARG)
+		"g") videofile=$(echo $@ | awk '{print $2}') 
 		 	 output=$(echo $@ | awk '{print $3}')
 	
 			 if [[ -z $videofile || -z $output ]]; then 
-				echo "$errorstatement ffedit -g [VIDEO FILE] [OUTPUT NAME/FORMAT] $enderrorstatement"
+				echo "$ERRORSTATEMENT ffedit -g [VIDEO FILE] [OUTPUT NAME ONLY] $ENDERRORSTATEMENT"
 				exit
 			 fi
  
 			 ffmpeg -loglevel 24 -i $videofile -r 50 -f gif $output.gif;;
 	
 		# Scale video
-		"s") videofile=$(readlink -f $OPTARG)
+		"s") videofile=$(echo $@ | awk '{print $2}') 
 		 	 width=$(echo $@ | awk '{print $3}')
 			 output=$(echo $@ | awk '{print $4}')
 			 if [[ -z $videofile  || -z $width || -z $output ]]; then 
-				echo "$errorstatement ffedit -s [VIDEO FILE] [Width] [OUTPUT NAME/FORMAT] $enderrorstatement"
+				echo "$ERRORSTATEMENT ffedit -s [VIDEO FILE] [Width] [OUTPUT NAME/FORMAT] $ENDERRORSTATEMENT"
 				exit
 			 fi
 
 			 ffmpeg -loglevel 24 -i $videofile -vf scale=$width:-1,setsar=1:1 $output;;
 		
 		# Crop video
-		"x") videofile=$(readlink -f $OPTARG)
+		"x") videofile=$(echo $@ | awk '{print $2}') 
 			 width=$(echo $@ | awk '{print $3}')
 			 height=$(echo $@ | awk '{print $4}')
 			 xpos=$(echo $@ | awk '{print $5}')
 			 ypos=$(echo $@ | awk '{print $6}')
 			 output=$(echo $@ | awk '{print $7}')
 			 if [[ -z $videofile || -z $width  || -z $height  || -z $xpos  || -z $ypos || -z $output ]]; then 
-				echo "$errorstatement ffedit -x [VIDEO FILE] [WIDTH] [HEIGHT] [X OFFSET] [Y OFFSET] [OUTPUT NAME/FORMAT] $enderrorstatement"
+				echo "$ERRORSTATEMENT ffedit -x [VIDEO FILE] [WIDTH] [HEIGHT] [X OFFSET] [Y OFFSET] [OUTPUT NAME/FORMAT] $ENDERRORSTATEMENT"
 				exit
 			 fi
 
 			 ffmpeg -loglevel 24 -i $videofile -vf "crop=$width:$height:$xpos:$ypos" $output;;
 	
 		# Extract sound 
-		"e") videofile=$(readlink -f $OPTARG) 
+		"e") videofile=$(echo $@ | awk '{print $1}')
 			 output=$(echo $@ | awk '{print $2}')
+
 	   		 if [[ -z $videofile || -z $output ]]; then 
-				echo "$errorstatement ffedit -e [VIDEO FILE] [OUTPUT NAME/FORMAT] $enderrorstatement"
+				echo "$ERRORSTATEMENT ffedit -e [VIDEO FILE] [OUTPUT NAME/FORMAT] $ENDERRORSTATEMENT"
 				exit
 			 fi
 			 ffmpeg -loglevel 24 -i $videofile -vn -q:a 0 -map a $output;;
 	
 		# Mute entire sound or sections
-		"m") videofile=$(readlink -f $OPTARG)
-
-			 # Checks if a 1 or a 0 has been inputted
-			 EorS=$(echo $@ | awk '{print $3}')
+		"m") videofile=$(echo $@ | awk '{print $2}') 
+			 EntireOrSection=$(echo $@ | awk '{print $3}') # Checks to see if the user wants to mute a section or the entire video 
 			 output=$(echo $@ | awk '{print $4}')
+			 n=$(echo $@ | awk '{print $5}')
 
-			 if [[ -z $videofile || -z $EorS || -z $output ]]; then 
-				echo "$errorstatement ffedit -m [VIDEO FILE] [0 OR 1] [OUTPUT NAME/FORMAT] $enderrorstatement"
+			 if [[ -z $videofile || -z $EntireOrSection || $EntireOrSection == "0" && -z $output ]]; then 
+				echo "$ERRORSTATEMENT ffedit -m [VIDEO FILE] [0] [OUTPUT NAME/FORMAT] $ENDERRORSTATEMENT"
 				exit
 			 fi
 
-			 if (( $EorS == "0" )); then
+			 if (( $EntireOrSection == "0" )); then
 			 	ffmpeg -loglevel 24 -i $videofile -c copy -an $output
 			 else
-			 	# Future feature, HOW MANY SECTIONS WOULD YOU LIKE TO MUTE?
-				timestamp1=$(mpv $videofile |& tee -a /dev/stderr | grep -o ..:..:.. | tail -n 2 | head -n 1) 
-				timestamp2=$(mpv $videofile |& tee -a /dev/stderr | grep -o ..:..:.. | tail -n 2 | head -n 1)
+				if [[ $EntireOrSection == "0" || -z $n ]]; then
+					echo "$ERRORSTATEMENT ffedit -m [VIDEO FILE] [1] [OUTPUT NAME/FORMAT] [NUMBER OF SECTIONS] $ENDERRORSTATEMENT"
+					exit
+				fi
 
-				# Converts timestamp into seconds (horrible code btw, only temporary)
-				secs1=$(echo $timestamp1 | cut -b "7 8")
-				mins1=$(echo $timestamp1 | cut -b "4 5")
-				hours1=$(echo $timestamp1 | cut -b "1 2")
-				minssecs1=$(expr $mins1 \* 60)
-				hoursmins1=$(expr $hours1 \* 60)
-				hourminssecs1=$(expr $hoursmins1 \* 60) 
-				totalsecs1=$(expr $minssecs1 + $secs1 + $hoursminssecs1)
+				for (( i=1; i<=$n*2; i++ )); do
+					timestamp[i]=$(mpv $videofile |& tee -a /dev/stderr | grep -o ..:..:.. | tail -n 2 | head -n 1) 
+				done
 
-				secs2=$(echo $timestamp2 | cut -b "7 8")
-				mins2=$(echo $timestamp2 | cut -b "4 5")
-				hours2=$(echo $timestamp2 | cut -b "1 2")
-				minssecs2=$(expr $mins2 \* 60)
-				hoursmins2=$(expr $hours2 \* 60)
-				hourminssecs2=$(expr $hoursmins2 \* 60) 
-				totalsecs2=$(expr $minssecs2 + $secs2 + $hoursminssecs2)
+				# Converts timestamp into seconds 
+				for (( i=1; i<=$n*2; i++ )); do
+					secs[i]=$(echo ${timestamp[i]} | cut -b "7 8")
+					mins[i]=$(echo ${timestamp[i]} | cut -b "4 5")
+					hours[i]=$(echo ${timestamp[i]}  | cut -b "1 2")
+					minssecs[i]=$(expr ${mins[i]} \* 60) # Converts mins to secs
+					hoursmins[i]=$(expr ${hours[i]} \* 60) # Converts hours to mins
+					hoursminssecs[i]=$(expr ${hoursmins[i]} \* 60) # Converts mins to secs
+					totalsecs[i]=$(expr ${minssecs[i]} + ${secs[i]} + ${hoursminssecs[i]})
+				done
 
-			 	ffmpeg -loglevel 24 -i $videofile -vcodec copy -af "volume=enable='between(t,$totalsecs1,$totalsecs2)':volume=0" $output
+				for (( i=1; i<=$n; i++ )); do
+					mute[i]=$(echo volume=enable=\'between\(t,${totalsecs[i*2-1]},${totalsecs[i*2]}\)\':volume=0,)
+				done
+				mute=$(echo ${mute[@]} | sed 's/.$//;s/ //g') # Remove last letter and remove space 
+
+			 	ffmpeg -loglevel 24 -i $videofile -vcodec copy -af $mute $output
 			 fi;;
 
-		"?") echo Invalid option, ffedit -h for help;;
+		"?") if [[ $@ -ne "--uninstall" && $@ -ne "--update" ]]; then
+				echo Invalid option or missing argument, ffedit -h for help
+				exit
+			 fi;;
 	esac
+
+case $@ in
+	"--update") read -p "WARNING, if you modified your file updating it will remove local changes, Type (Y/N) to continue: " confirmation
+			   if (( $confirmation == "Y" || $confirmation == "y" )); then
+			   		update=$(mktemp /tmp/UpdateChecker-XXXXXXXXXXXXXX.txt)
+			   		sudo curl -sL "https://raw.githubusercontent.com/Edesem/FFedit/main/ffedit" -o $update
+				   uptodate=$(diff -qs $update /usr/local/bin/ffedit | awk '{print $(NF)}')
+				   if (( $uptodate == "differ" )); then
+				   		sudo cp $update /usr/local/bin/ffedit
+						echo "Updated script!"
+				   else 
+				   		echo "Script already up to date!"
+						exit
+				   fi
+				   manupdate=$(mktemp /tmp/ManUpdateChecker-XXXXXXXXXXXXXX.txt)
+				   sudo curl -sL "https://raw.githubusercontent.com/Edesem/FFedit/main/ffedit.1" -o $manupdate 
+				   manuptodate=$(diff -qs $manupdate /usr/local/bin/ffedit | awk '{print $(NF)}')
+				   if (( $manuptodate == "differ" )); then
+				   		sudo cp $manupdate /usr/local/man/man1/ffedit.1
+				   		sudo mandb -q 
+						echo "Updated man-page!"
+				   else
+				   		echo "Man-page already up to date"
+						exit
+				   fi
+				   echo "Up to date!"
+			   fi
+			   exit
+			   ;;
+
+	"--uninstall") read -p "Are you sure? (Y/N)" confirmation
+				 if (( $confirmation == "Y" )); then
+				 	sudo rm -i /usr/local/bin/ffedit /usr/local/man/man1/ffedit.1	
+				 fi
+				 ;;
+
+esac
+
 	exit
 done
 
 echo "Usage: ffedit [OPTIONS] [ARGS] ...
+Use 'man ffedit' for a detailed manual
+		
+All options
 
--h for help
+-t Trim video
+-c Concatenate video 
+-g Convert video to gif format
+-s Scale video 
+-x Crop 
+-e Extract sound
+-m Mute entire video or section
+
+--update
+--uninstall	
 
 'man ffedit' for detailed manual"
