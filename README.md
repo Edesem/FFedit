@@ -64,8 +64,6 @@ Change audio volume
 
 Allow scaling regardless of aspect ratio
 
-Convert video formats
-
 ## Bug Reporting
 If you notice any bugs simply just post an issue and I'll get around to resolving the issue
 
