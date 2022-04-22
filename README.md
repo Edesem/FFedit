@@ -25,7 +25,7 @@ sudo curl -sL "https://raw.githubusercontent.com/Edesem/FFedit/main/ffedit.1" -o
 sudo mandb -q
 ```
 
-## Unistall
+## Uninstall
 ```
 sudo rm -i /usr/local/bin/ffedit /usr/local/man/man1/ffedit.1
 ```
