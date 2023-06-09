@@ -28,7 +28,7 @@ Refer to manual for more information"
 
 # Output is surpessed when input is incorrect it would give an unintended error
 # This way the error message will be only the ones provided above
-while getopts "t:j:c:g:s:x:e:m:f" input 2>/dev/null
+while getopts "tjcgsxemf" input 2>/dev/null
 do
 	case $input in
 
@@ -49,9 +49,9 @@ do
 			 echo end timestamp: ${timestamp[2]}
 			 
              # Encoded (Slower, lower quality, edits are sharp and precise)
-#             edit "-ss ${timestamp[1]} -to ${timestamp[2]} -c:v libx264";;
+             edit "-ss ${timestamp[1]} -to ${timestamp[2]} -c:v libx264";;
              # Copied (Faster, retains original quality, can be glitches in the start and end of the edits)
-             edit "-ss ${timestamp[1]} -to ${timestamp[2]} -c copy";;
+#             edit "-ss ${timestamp[1]} -to ${timestamp[2]} -c copy";;
 
 		# Concatenate
 		"j") mylist=$(mktemp /tmp/mylist-XXXXXXXXXXXXX.txt) 
@@ -75,9 +75,9 @@ do
 			 fi
 
 	         # Encoded (Slower, lower quality, edits are sharp and precise)
-#            ffmpeg -loglevel 24 -safe 0 -f concat -i $mylist -c:v libx264 $output;;
+            ffmpeg -loglevel 24 -safe 0 -f concat -i $mylist -c:v libx264 $output;;
              # Copied (Faster, retains original quality, can be glitches in the start and end of the edits)
-			 ffmpeg -loglevel 24 -safe 0 -f concat -i $mylist -c copy $output;;
+#			 ffmpeg -loglevel 24 -safe 0 -f concat -i $mylist -c copy $output;;
 
 	
 		"c") videofile=$(selector $2)
