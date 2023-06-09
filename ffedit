@@ -3,7 +3,7 @@
 # Functions
 
 edit () {
-		ffmpeg -loglevel 24 -i $videofile $1 $output
+		ffmpeg -loglevel 24 -i $videofile $1 $output 
 }
 
 selector () {
@@ -26,7 +26,9 @@ Refer to manual for more information"
 
 # Main script
 
-while getopts tcgsxem input 2>/dev/null
+# Output is surpessed when input is incorrect it would give an unintended error
+# This way the error message will be only the ones provided above
+while getopts "t:j:c:g:s:x:e:m:f" input 2>/dev/null
 do
 	case $input in
 
@@ -43,13 +45,16 @@ do
 			 	timestamp_selector
 			 done
 
-			 echo start timestamp:i ${timestamp[1]}
+			 echo start timestamp: ${timestamp[1]}
 			 echo end timestamp: ${timestamp[2]}
 			 
-			 edit "-ss ${timestamp[1]} -to ${timestamp[2]} -c copy";;
-	
+             # Encoded (Slower, lower quality, edits are sharp and precise)
+#             edit "-ss ${timestamp[1]} -to ${timestamp[2]} -c:v libx264";;
+             # Copied (Faster, retains original quality, can be glitches in the start and end of the edits)
+             edit "-ss ${timestamp[1]} -to ${timestamp[2]} -c copy";;
+
 		# Concatenate
-		"c") mylist=$(mktemp /tmp/mylist-XXXXXXXXXXXXX.txt) 
+		"j") mylist=$(mktemp /tmp/mylist-XXXXXXXXXXXXX.txt) 
 	   		 concatN=$(selector $2)
 			 concatN=$(expr $concatN + 3) 
 		 # This is done because in the for loop that comes after we start at i=3,
@@ -65,12 +70,62 @@ do
 			 output=$(echo $@ | awk -v i=$concatN '{print $i}')
 	
 			 if [[ -z $concatN || -z $video || -z $output ]]; then 
-				echo "$ERRORSTATEMENT ffedit -c [NUM OF VIDEOS] [VIDEO1] [VIDEO2] ... [OUTPUT NAME/FORMAT] $ENDERRORSTATEMENT"
+				echo "$ERRORSTATEMENT ffedit -j [NUM OF VIDEOS] [VIDEO1] [VIDEO2] ... [OUTPUT NAME/FORMAT] $ENDERRORSTATEMENT"
 				exit
 			 fi
-	
+
+	         # Encoded (Slower, lower quality, edits are sharp and precise)
+#            ffmpeg -loglevel 24 -safe 0 -f concat -i $mylist -c:v libx264 $output;;
+             # Copied (Faster, retains original quality, can be glitches in the start and end of the edits)
 			 ffmpeg -loglevel 24 -safe 0 -f concat -i $mylist -c copy $output;;
+
 	
+		"c") videofile=$(selector $2)
+			 output=$(selector $3)
+			 finaloutput=$output
+ 
+			 if [[ -z $videofile || -z $output ]]; then 
+			 	echo "$ERRORSTATEMENT ffedit -c [VIDEO FILE] [OUTPUT NAME/FORMAT] $ENDERRORSTATEMENT"
+				exit
+			 fi
+
+			 for (( i=1; i<=2; i++ )); do
+			 	timestamp_selector
+			 done
+
+			 echo start timestamp: ${timestamp[1]}
+			 echo end timestamp: ${timestamp[2]}
+			 
+			 initaltimestamp=00:00:00
+			 
+			 clip=$(echo ${output%.*}) 
+
+			 output=$(mktemp $clip.XXXXXXXXXXXXXX.mp4)
+			 output1=$output 
+			 echo "Processing first clip (This may take a while)"
+             # Encoded (Slower, lower quality, edits are sharp and precise)
+#			 edit "-y -ss $initaltimestamp -to ${timestamp[1]} -c:v libx264" # -y option is used to overwrite the temporary files immediately
+             # Copied (Faster, retains original quality, can be glitches in the start and end of the edits)
+			 edit "-y -ss $initaltimestamp -to ${timestamp[1]} -c copy" # -y option is used to overwrite the temporary files immediately
+
+			 finaltimestamp=$(ffmpeg -i $videofile 2>&1 | grep "Duration"| cut -d ' ' -f 4 | sed s/....$//)
+
+			 output=$(mktemp $clip.XXXXXXXXXXXXXX.mp4)
+			 output2=$output
+			 echo "Processing second clip (This may take a while)"
+
+             # Encoded (Slower, lower quality, edits are sharp and precise)
+#   			 edit "-y -ss ${timestamp[2]} -to $finaltimestamp -c:v libx264"
+             # Copied (Faster, retains original quality, can be glitches in the start and end of the edits)
+   			 edit "-y -ss ${timestamp[2]} -to $finaltimestamp -c copy"
+
+
+			 echo "Joining videos together"
+			 ffedit -j 2 $output1 $output2 $finaloutput
+
+			 rm -f $output1 $output2;;
+
+
 		# Convert video to gif
 		"g") videofile=$(selector $2) 
 		 	 output=$(selector $3)
@@ -84,15 +139,16 @@ do
 	
 		# Scale video
 		"s") videofile=$(selector $2)
-		 	 width=$(selector $3) 
-			 output=$(selector $4)
+		 	 length=$(selector $3) 
+		 	 width=$(selector $4) 
+			 output=$(selector $5)
 
-			 if [[ -z $videofile  || -z $width || -z $output ]]; then 
-				echo "$ERRORSTATEMENT ffedit -s [VIDEO FILE] [Width] [OUTPUT NAME/FORMAT] $ENDERRORSTATEMENT"
+			 if [[ -z $videofile  || -z $length || -z $width || -z $output ]]; then 
+				echo "$ERRORSTATEMENT ffedit -s [VIDEO FILE] [LENGTH] [WIDTH] [OUTPUT NAME/FORMAT] $ENDERRORSTATEMENT"
 				exit
 			 fi
 
-			 edit "-vf scale=$width:-1,setsar=1:1";;
+			 edit "-vf scale=$length:$width";;
 		
 		# Crop video
 		"x") videofile=$(selector $2)
@@ -165,7 +221,21 @@ do
 			 	edit "-vcodec copy -af $mute"
 			 fi;;
 
-		"?") if [[ $@ -ne "--uninstall" && $@ -ne "--update" ]]; then
+		# Convert formats
+		"f") videofile=$(selector $2)
+			 output=$(selector $3)
+
+	   		 if [[ -z $videofile || -z $output ]]; then  
+				echo "$ERRORSTATEMENT ffedit -f [VIDEO FILE] [OUTPUT NAME/FORMAT] $ENDERRORSTATEMENT"
+				exit
+			 fi
+			
+
+			 edit;;
+
+
+		"?") if  [[ $@ != "--uninstall" ]] && [[ $@ != "--update" ]]; then
+
 				echo "Invalid option or missing argument 
 'ffedit' for help or 'man ffedit' for more detail"
 				exit
@@ -208,9 +278,10 @@ case $@ in
 			   exit
 			   ;;
 
-	"--uninstall") read -p "Are you sure? (Y/N)" confirmation
-				 if (( $confirmation == "Y" )); then
-				 	sudo rm -i /usr/local/bin/ffedit /usr/local/man/man1/ffedit.1	
+	"--uninstall") read -p "Are you sure you want to uninstall FFedit? (Y/N)" confirmation
+				 if (( $confirmation == "Y" || $confirmation == "y" )); then
+				 	sudo rm -i /usr/local/bin/ffedit /usr/local/man/man1/ffedit.1
+					sudo mandb
 				 fi
 				 ;;
 
@@ -225,12 +296,14 @@ Use 'man ffedit' for a detailed manual
 All options
 
 -t Trim video
--c Concatenate video 
+-j Concatenate video 
+-c Cut video
 -g Convert video to gif format
 -s Scale video 
 -x Crop 
 -e Extract sound
 -m Mute entire video or section
+-f Convert formats
 
 --update
 --uninstall"
