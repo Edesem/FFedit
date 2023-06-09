@@ -35,6 +35,8 @@ Trim videos
 
 Concatenate videos
 
+Cut out a section of a video (remove a section out)
+
 Convert videos to gif's
 
 Scale videos
@@ -48,8 +50,6 @@ Mute entire video or just sections
 Convert video/audio formats
 
 ## Future Features
-Cut out a section of a video (Basically just trim and concat chained)
-
 Make cropping videos less tedious using some sort of program to select what you want to crop (Ideally should be very minimalist)
 
 When concatenating videos give the option to convert everything into one format and then concatenate
